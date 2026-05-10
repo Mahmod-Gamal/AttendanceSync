@@ -41,12 +41,14 @@ namespace AttendanceSync.Infrastructure.Services
 
                 var pageSize = _config.GetValue<int>("SyncSettings:PageSize", 100);
                 var initialLookBackDays = _config.GetValue<int>("SyncSettings:InitialLookBackDays", 30);
+                var overlapMinutes = _config.GetValue<int>("SyncSettings:OverlapMinutes", 5);
 
                 var endTime = DateTime.Now;
                 var lastSyncedAttendanceTime = await _db.SyncedAttendanceLogs
                     .Where(x => x.IsSynced)
                     .MaxAsync(x => (DateTime?)x.AttendanceTime);
-                var beginTime = lastSyncedAttendanceTime ?? endTime.AddDays(-initialLookBackDays);
+                var beginTime = lastSyncedAttendanceTime?.AddMinutes(-overlapMinutes)
+                    ?? endTime.AddDays(-initialLookBackDays);
 
                 var pageIndex = 1;
                 var hasMore = true;
@@ -62,8 +64,6 @@ namespace AttendanceSync.Infrastructure.Services
 
                     if (hikResponse?.ErrorCode != "0" || hikResponse.Data == null)
                     {
-                        totalFailed += pageSize;
-
                         await _logService.LogErrorAsync(
                             jobLogId,
                             "HikvisionAttendanceFetch",
@@ -94,6 +94,8 @@ namespace AttendanceSync.Infrastructure.Services
                     var newRecords = records
                         .Where(x => !string.IsNullOrWhiteSpace(x.RecordGuid))
                         .Where(x => !alreadySyncedIdSet.Contains(x.RecordGuid))
+                        .GroupBy(x => x.RecordGuid)
+                        .Select(x => x.OrderByDescending(r => r.DeviceTime).First())
                         .ToList();
 
                     var invalidRecords = newRecords
