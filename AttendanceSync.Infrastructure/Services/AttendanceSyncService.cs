@@ -142,7 +142,7 @@ namespace AttendanceSync.Infrastructure.Services
                                     HikvisionRecordId = record.RecordGuid,
                                     EmployeeCode = record.PersonInfo!.BaseInfo!.PersonCode,
                                     AttendanceTime = record.DeviceTime,
-                                    Direction = record.Direction.ToString(),
+                                    Direction = mapped.FunctionType,
                                     KayanRequestPayload = JsonSerializer.Serialize(mapped),
                                     KayanResponsePayload = kayanResponse,
                                     IsSynced = true,
@@ -327,19 +327,17 @@ namespace AttendanceSync.Infrastructure.Services
                 Tid = record.RecordGuid,
                 EmployeeCardNumber = record.PersonInfo!.BaseInfo!.PersonCode,
                 AttendanceDate = record.DeviceTime,
-                FunctionType = MapDirection(record.Direction),
+                FunctionType = MapFunctionType(record.DeviceTime),
                 MachineName = record.DeviceName
             };
         }
 
-        private static string MapDirection(int direction)
+        private static string MapFunctionType(DateTime attendanceTime)
         {
-            return direction switch
-            {
-                0 => "IN",
-                1 => "OUT",
-                _ => "UNKNOWN"
-            };
+            var time = attendanceTime.TimeOfDay;
+            return time >= new TimeSpan(7, 30, 0) && time <= new TimeSpan(11, 0, 0)
+                ? "F1-IN"
+                : "F1-OUT";
         }
     }
 }
