@@ -336,8 +336,8 @@ namespace AttendanceSync.Infrastructure.Services
         {
             var time = attendanceTime.TimeOfDay;
             return time >= new TimeSpan(7, 30, 0) && time <= new TimeSpan(11, 0, 0)
-                ? "F1-IN"
-                : "F1-OUT";
+                ? "F1"
+                : "F2";
         }
     }
 }
